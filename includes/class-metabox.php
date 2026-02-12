@@ -38,29 +38,74 @@ class Metabox {
         $seo = RankMath_Adapter::get_post_seo((int)$post->ID);
         $is_product = ($post->post_type === 'product');
         $short_desc = $is_product ? (string) get_post_field('post_excerpt', $post->ID) : '';
+        $permalink  = get_permalink($post);
+        $site_name  = get_bloginfo('name');
+        $h1_title   = (string) get_the_title($post);
+        $long_html  = (string) get_post_field('post_content', $post->ID);
+
+        $thumb_id = (int) get_post_thumbnail_id($post->ID);
+        $thumb_alt = $thumb_id ? (string) get_post_meta($thumb_id, '_wp_attachment_image_alt', true) : '';
+
+        // WooCommerce ürün meta (fiyat / stok) – schema varlığını pratikte doğrulamak için
+        $price = '';
+        $stock = '';
+        if ($is_product && function_exists('wc_get_product')) {
+            $p = wc_get_product($post->ID);
+            if ($p) {
+                $price = (string) $p->get_price();
+                $stock = (string) $p->get_stock_status(); // instock/outofstock/onbackorder
+            }
+        }
+
+        $cats = [];
+        if ($is_product) {
+            $term_ids = wp_get_post_terms($post->ID, 'product_cat', ['fields' => 'ids']);
+            if (!is_wp_error($term_ids) && !empty($term_ids)) $cats = $term_ids;
+        }
+
         wp_nonce_field('hmpsui_save', 'hmpsui_nonce');
         ?>
-        <div class="hmpsui-wrap">
+        <div class="hmpsui-wrap"
+             data-hmpsui="1"
+             data-permalink="<?php echo esc_attr($permalink); ?>"
+             data-site-name="<?php echo esc_attr($site_name); ?>"
+             data-h1="<?php echo esc_attr($h1_title); ?>"
+             data-long-html="<?php echo esc_attr(wp_strip_all_tags($long_html)); ?>"
+             data-thumb-alt="<?php echo esc_attr($thumb_alt); ?>"
+             data-has-thumb="<?php echo $thumb_id ? '1' : '0'; ?>"
+             data-has-cats="<?php echo !empty($cats) ? '1' : '0'; ?>"
+             data-price="<?php echo esc_attr($price); ?>"
+             data-stock="<?php echo esc_attr($stock); ?>"
+        >
+            <?php if ($is_product): ?>
+            <div class="hmpsui-snippet">
+                <div class="hmpsui-snippet__label">Google Snippet Önizleme</div>
+                <div class="hmpsui-snippet__title" data-snippet-title></div>
+                <div class="hmpsui-snippet__url" data-snippet-url><?php echo esc_html($permalink); ?></div>
+                <div class="hmpsui-snippet__desc" data-snippet-desc></div>
+            </div>
+            <?php endif; ?>
+
             <p>
                 <label><strong>SEO Başlık</strong></label>
-                <input type="text" name="hmpsui[title]" value="<?php echo esc_attr($seo['title']); ?>" class="widefat" />
-                <small>Öneri: 45–60 karakter. Ürün adı + ana fayda.</small>
+                <input type="text" name="hmpsui[title]" value="<?php echo esc_attr($seo['title']); ?>" class="widefat" data-hmpsui-title />
+                <small>Öneri: 30–65 karakter. <span class="hmpsui-count" data-count-title>0</span></small>
             </p>
             <p>
                 <label><strong>SEO Açıklama</strong></label>
-                <textarea name="hmpsui[description]" rows="3" class="widefat"><?php echo esc_textarea($seo['description']); ?></textarea>
-                <small>Öneri: 120–160 karakter. 1–2 fayda + güven unsuru.</small>
+                <textarea name="hmpsui[description]" rows="3" class="widefat" data-hmpsui-desc><?php echo esc_textarea($seo['description']); ?></textarea>
+                <small>Öneri: 90–170 karakter. <span class="hmpsui-count" data-count-desc>0</span></small>
             </p>
             <p>
                 <label><strong>Odak Anahtar Kelime</strong></label>
-                <input type="text" name="hmpsui[focus]" value="<?php echo esc_attr($seo['focus']); ?>" class="widefat" />
+                <input type="text" name="hmpsui[focus]" value="<?php echo esc_attr($seo['focus']); ?>" class="widefat" data-hmpsui-focus />
                 <small>Öneri: tek ana kelime (istersen virgülle çoklu).</small>
             </p>
 
             <?php if ($is_product): ?>
             <p>
                 <label><strong>Kısa Açıklama (Ürün Özeti)</strong></label>
-                <textarea name="hmpsui[short_desc]" rows="3" class="widefat"><?php echo esc_textarea($short_desc); ?></textarea>
+                <textarea name="hmpsui[short_desc]" rows="3" class="widefat" data-hmpsui-short><?php echo esc_textarea($short_desc); ?></textarea>
                 <small>
                     Bu alan WooCommerce “Kısa açıklama”dır. (Ürün kartları / hızlı bakış / bazı temalarda öne çıkar.)
                 </small>
@@ -95,49 +140,15 @@ class Metabox {
                 </select>
             </p>
 
-            <?php
-            // --- Mini ürün checklist (MVP) ---
-            // Rank Math skoruna bağımlı değiliz; ürün odaklı “eksikler” listesi çıkarıyoruz.
-            $issues = [];
-            $score  = 100;
-
-            $title = trim((string)$seo['title']);
-            $desc  = trim((string)$seo['description']);
-            $focus = trim((string)$seo['focus']);
-
-            if ($title === '') { $issues[] = 'SEO Başlık boş.'; $score -= 25; }
-            if ($desc === '')  { $issues[] = 'SEO Açıklama boş.'; $score -= 25; }
-
-            $title_len = function_exists('mb_strlen') ? mb_strlen($title) : strlen($title);
-            $desc_len  = function_exists('mb_strlen') ? mb_strlen($desc)  : strlen($desc);
-
-            if ($title !== '' && ($title_len < 30 || $title_len > 65)) { $issues[] = 'SEO Başlık uzunluğu önerilen aralıkta değil (30–65).'; $score -= 10; }
-            if ($desc !== '' && ($desc_len < 90 || $desc_len > 170))   { $issues[] = 'SEO Açıklama uzunluğu önerilen aralıkta değil (90–170).'; $score -= 10; }
-
-            if ($focus === '') { $issues[] = 'Odak anahtar kelime boş.'; $score -= 10; }
-            if ($focus !== '' && $title !== '' && stripos($title, $focus) === false) { $issues[] = 'Odak kelime SEO Başlık içinde geçmiyor (öneri).'; $score -= 5; }
-
-            if ($is_product) {
-                if (trim($short_desc) === '') { $issues[] = 'Kısa açıklama (ürün özeti) boş.'; $score -= 5; }
-                if (!has_post_thumbnail($post->ID)) { $issues[] = 'Ürün görseli (featured image) yok.'; $score -= 5; }
-                $terms = wp_get_post_terms($post->ID, 'product_cat', ['fields' => 'ids']);
-                if (empty($terms) || is_wp_error($terms)) { $issues[] = 'Ürün kategorisi atanmadı.'; $score -= 5; }
-            }
-
-            $score = max(0, min(100, (int)$score));
-            ?>
-
             <hr />
-            <p><strong>HM Pro Skor:</strong> <?php echo esc_html($score); ?>/100</p>
-            <?php if (!empty($issues)): ?>
+            <?php if ($is_product): ?>
+                <p class="hmpsui-scoreline"><strong>HM Pro Skor:</strong> <span data-hmpsui-score>0</span>/100</p>
                 <p><strong>Eksikler / Uyarılar</strong></p>
-                <ul style="margin-left:18px; list-style:disc;">
-                    <?php foreach ($issues as $it): ?>
-                        <li><?php echo esc_html($it); ?></li>
-                    <?php endforeach; ?>
-                </ul>
+                <ul class="hmpsui-issues" data-hmpsui-issues></ul>
             <?php else: ?>
-                <p>✅ Temel kontroller geçti.</p>
+                <p class="hmpsui-scoreline"><strong>HM Pro Skor:</strong> <span data-hmpsui-score>0</span>/100</p>
+                <p><strong>Eksikler / Uyarılar</strong></p>
+                <ul class="hmpsui-issues" data-hmpsui-issues></ul>
             <?php endif; ?>
         </div>
         <?php

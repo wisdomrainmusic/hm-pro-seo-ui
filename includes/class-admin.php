@@ -10,12 +10,23 @@ class Admin {
         add_action('admin_enqueue_scripts', [__CLASS__, 'enqueue_assets']);
     }
 
-    public static function enqueue_assets(): void {
+    public static function enqueue_assets($hook): void {
+        // Sadece edit ekranlarında yükle
+        if (!in_array($hook, ['post.php', 'post-new.php', 'term.php', 'edit-tags.php'], true)) return;
+
         wp_enqueue_style(
             'hmpsui-admin',
             HMPSUI_URL . 'assets/admin.css',
             [],
             HMPSUI_VER
+        );
+
+        wp_enqueue_script(
+            'hmpsui-admin',
+            HMPSUI_URL . 'assets/admin.js',
+            ['jquery'],
+            HMPSUI_VER,
+            true
         );
     }
 
@@ -30,7 +41,7 @@ class Admin {
 
     public static function remove_rankmath_metabox(): void {
         // Rank Math metabox id: rank_math_metabox
-        // Not (kısa): RM metabox kaldırma -> remove_meta_box('rank_math_metabox', ...).
+        // remove_meta_box docs: context = normal/side/advanced ([developer.wordpress.org](https://developer.wordpress.org/reference/functions/remove_meta_box/?utm_source=chatgpt.com))
         $screens = ['product', 'post', 'page'];
         foreach ($screens as $screen) {
             remove_meta_box('rank_math_metabox', $screen, 'normal');
