@@ -36,6 +36,8 @@ class Metabox {
 
     public static function render(\WP_Post $post): void {
         $seo = RankMath_Adapter::get_post_seo((int)$post->ID);
+        $is_product = ($post->post_type === 'product');
+        $short_desc = $is_product ? (string) get_post_field('post_excerpt', $post->ID) : '';
         wp_nonce_field('hmpsui_save', 'hmpsui_nonce');
         ?>
         <div class="hmpsui-wrap">
@@ -54,6 +56,17 @@ class Metabox {
                 <input type="text" name="hmpsui[focus]" value="<?php echo esc_attr($seo['focus']); ?>" class="widefat" />
                 <small>Öneri: tek ana kelime (istersen virgülle çoklu).</small>
             </p>
+
+            <?php if ($is_product): ?>
+            <p>
+                <label><strong>Kısa Açıklama (Ürün Özeti)</strong></label>
+                <textarea name="hmpsui[short_desc]" rows="3" class="widefat"><?php echo esc_textarea($short_desc); ?></textarea>
+                <small>
+                    Bu alan WooCommerce “Kısa açıklama”dır. (Ürün kartları / hızlı bakış / bazı temalarda öne çıkar.)
+                </small>
+            </p>
+            <?php endif; ?>
+
             <p>
                 <label><strong>Canonical URL</strong></label>
                 <input type="url" name="hmpsui[canonical]" value="<?php echo esc_attr($seo['canonical']); ?>" class="widefat" />
@@ -81,6 +94,51 @@ class Metabox {
                     ?>
                 </select>
             </p>
+
+            <?php
+            // --- Mini ürün checklist (MVP) ---
+            // Rank Math skoruna bağımlı değiliz; ürün odaklı “eksikler” listesi çıkarıyoruz.
+            $issues = [];
+            $score  = 100;
+
+            $title = trim((string)$seo['title']);
+            $desc  = trim((string)$seo['description']);
+            $focus = trim((string)$seo['focus']);
+
+            if ($title === '') { $issues[] = 'SEO Başlık boş.'; $score -= 25; }
+            if ($desc === '')  { $issues[] = 'SEO Açıklama boş.'; $score -= 25; }
+
+            $title_len = function_exists('mb_strlen') ? mb_strlen($title) : strlen($title);
+            $desc_len  = function_exists('mb_strlen') ? mb_strlen($desc)  : strlen($desc);
+
+            if ($title !== '' && ($title_len < 30 || $title_len > 65)) { $issues[] = 'SEO Başlık uzunluğu önerilen aralıkta değil (30–65).'; $score -= 10; }
+            if ($desc !== '' && ($desc_len < 90 || $desc_len > 170))   { $issues[] = 'SEO Açıklama uzunluğu önerilen aralıkta değil (90–170).'; $score -= 10; }
+
+            if ($focus === '') { $issues[] = 'Odak anahtar kelime boş.'; $score -= 10; }
+            if ($focus !== '' && $title !== '' && stripos($title, $focus) === false) { $issues[] = 'Odak kelime SEO Başlık içinde geçmiyor (öneri).'; $score -= 5; }
+
+            if ($is_product) {
+                if (trim($short_desc) === '') { $issues[] = 'Kısa açıklama (ürün özeti) boş.'; $score -= 5; }
+                if (!has_post_thumbnail($post->ID)) { $issues[] = 'Ürün görseli (featured image) yok.'; $score -= 5; }
+                $terms = wp_get_post_terms($post->ID, 'product_cat', ['fields' => 'ids']);
+                if (empty($terms) || is_wp_error($terms)) { $issues[] = 'Ürün kategorisi atanmadı.'; $score -= 5; }
+            }
+
+            $score = max(0, min(100, (int)$score));
+            ?>
+
+            <hr />
+            <p><strong>HM Pro Skor:</strong> <?php echo esc_html($score); ?>/100</p>
+            <?php if (!empty($issues)): ?>
+                <p><strong>Eksikler / Uyarılar</strong></p>
+                <ul style="margin-left:18px; list-style:disc;">
+                    <?php foreach ($issues as $it): ?>
+                        <li><?php echo esc_html($it); ?></li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php else: ?>
+                <p>✅ Temel kontroller geçti.</p>
+            <?php endif; ?>
         </div>
         <?php
     }
@@ -94,5 +152,17 @@ class Metabox {
         if (!is_array($data)) return;
 
         RankMath_Adapter::save_post_seo($post_id, $data);
+
+        // Woo Short Description = post_excerpt (sadece ürünlerde)
+        if ($post->post_type === 'product' && array_key_exists('short_desc', $data)) {
+            $excerpt = sanitize_textarea_field((string) $data['short_desc']);
+            // save_post içinde wp_update_post recursion riski var; remove/add ile güvenli yapıyoruz.
+            remove_action('save_post', [__CLASS__, 'save'], 10);
+            wp_update_post([
+                'ID'           => $post_id,
+                'post_excerpt' => $excerpt,
+            ]);
+            add_action('save_post', [__CLASS__, 'save'], 10, 2);
+        }
     }
 }
