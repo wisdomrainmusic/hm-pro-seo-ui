@@ -1,0 +1,6 @@
+/* Rank Math sağ panel SEO skoru gizle */
+.postbox-container .rank-math-score,
+.postbox-container .rank-math-score-wrapper,
+.postbox-container .seo-score {
+    display: none !important;
+}
