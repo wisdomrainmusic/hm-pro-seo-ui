@@ -7,6 +7,16 @@ class Admin {
     public static function init(): void {
         add_action('admin_notices', [__CLASS__, 'notice_rankmath_missing']);
         add_action('add_meta_boxes', [__CLASS__, 'remove_rankmath_metabox'], 99);
+        add_action('admin_enqueue_scripts', [__CLASS__, 'enqueue_assets']);
+    }
+
+    public static function enqueue_assets(): void {
+        wp_enqueue_style(
+            'hmpsui-admin',
+            HMPSUI_URL . 'assets/admin.css',
+            [],
+            HMPSUI_VER
+        );
     }
 
     public static function notice_rankmath_missing(): void {
