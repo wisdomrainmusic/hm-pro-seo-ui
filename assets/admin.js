@@ -225,6 +225,56 @@
     }
   });
 
+  // HM Pro: Slug değişince URL preview'yi canlı güncelle
+  function hmpsui_update_permalink_preview_from_slug(){
+    var $slug = $('#new-post-slug');
+    var $preview = $('#hmpsui-permalink-preview');
+    if (!$slug.length || !$preview.length) return;
+
+    var slugVal = ($slug.val() || '').trim();
+    if (!slugVal) return;
+
+    // WP edit ekranındaki permalink yapısını al: #sample-permalink a ya da #sample-permalink
+    var $sampleLink = $('#sample-permalink a');
+    var sampleHref = $sampleLink.length ? $sampleLink.attr('href') : '';
+
+    // sample-permalink yoksa, mevcut preview URL üzerinden base çıkarıp slug'ı değiştir
+    var current = $preview.text().trim();
+
+    // Base URL hesapla (en güvenlisi sample permalink)
+    var base;
+    if (sampleHref) {
+      // sampleHref genelde doğru canonical/permalink yapısını verir
+      try {
+        var u = new URL(sampleHref, window.location.origin);
+        // path'in son segmentini slug yapalım
+        var parts = u.pathname.replace(/\/+$/, '').split('/');
+        parts[parts.length - 1] = slugVal;
+        u.pathname = parts.join('/') + '/';
+        base = u.toString();
+      } catch(e) {
+        base = sampleHref;
+      }
+    } else {
+      // fallback: mevcut URL'nin son slugını değiştir
+      base = current.replace(/\/[^\/]*\/?$/, '/' + slugVal + '/');
+    }
+
+    $preview.text(base);
+  }
+
+  // Slug input açıldığında ve değiştikçe güncelle
+  $(document).on('input keyup change', '#new-post-slug', function(){
+    hmpsui_update_permalink_preview_from_slug();
+  });
+
+  // Sayfa ilk açıldığında (slug zaten varsa) bir kez güncelle
+  $(document).ready(function(){
+    setTimeout(function(){
+      hmpsui_update_permalink_preview_from_slug();
+    }, 300);
+  });
+
 
   // Rank Math sağ panel "SEO: xx/100" kutusunu kesin gizle (CSS kaçarsa bile)
   $(document).ready(function(){
