@@ -1,7 +1,19 @@
 /* Rank Math sağ panel skor alanını gizle (müşteri kafası karışmasın) */
-.postbox-container .rank-math-score,
-.postbox-container .rank-math-score-wrapper,
-.postbox-container .seo-score {
+.misc-pub-section.rank-math-seo-score,
+.misc-pub-section.rank-math-seo-score * ,
+.rank-math-seo-score,
+.rank-math-seo-score * {
+  display: none !important;
+}
+
+/* Rank Math Content AI kutusunu CSS ile de sakla (asıl kaldırma PHP ile) */
+#rank-math-metabox-content-ai,
+#rank_math_metabox_content_ai,
+#rank_math_content_ai,
+.postbox[id*="content-ai"],
+.postbox[id*="content_ai"],
+.postbox[id*="rank_math"][id*="ai"],
+.postbox[id*="rank-math"][id*="ai"] {
   display: none !important;
 }
 
