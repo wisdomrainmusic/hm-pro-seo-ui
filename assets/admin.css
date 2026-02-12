@@ -47,6 +47,26 @@
   line-height: 1.4;
 }
 
+.hmpsui-permalink-row {
+  margin: 12px 0 18px;
+}
+.hmpsui-permalink-inline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+.hmpsui-permalink-inline code {
+  display: block;
+  padding: 6px 8px;
+  background: #f6f7f7;
+  border: 1px solid #dcdcde;
+  border-radius: 4px;
+  max-width: 100%;
+  overflow: auto;
+}
+
 .hmpsui-count {
   font-weight: 600;
 }

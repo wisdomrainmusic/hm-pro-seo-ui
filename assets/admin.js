@@ -201,6 +201,31 @@
 
   $(document).ready(bind);
 
+
+  // HM Pro: URL/Slug düzenle butonu (WP permalink editörünü aç)
+  $(document).on('click', '#hmpsui-edit-slug', function(e){
+    e.preventDefault();
+
+    // Başlık alanına scroll (slug edit genelde burada)
+    if ($('#titlewrap').length) {
+      $('html, body').animate({ scrollTop: $('#titlewrap').offset().top - 80 }, 250);
+    }
+
+    // WP'nin slug düzenle butonu (farklı WP sürümlerinde selector değişebiliyor)
+    var $editBtn =
+      $('#edit-slug-buttons .edit-slug, #edit-slug-box .edit-slug, #edit-slug-buttons button, #edit-slug-box button').first();
+
+    if ($editBtn.length) {
+      $editBtn.trigger('click');
+      setTimeout(function(){
+        if ($('#new-post-slug').length) $('#new-post-slug').focus();
+      }, 300);
+    } else {
+      alert('Kalıcı bağlantı düzenleyicisi bu ekranda bulunamadı. Başlık altındaki "Kalıcı bağlantı" alanını kontrol edin.');
+    }
+  });
+
+
   // Rank Math sağ panel "SEO: xx/100" kutusunu kesin gizle (CSS kaçarsa bile)
   $(document).ready(function(){
     function hideRMScore(){
