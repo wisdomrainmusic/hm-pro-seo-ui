@@ -14,18 +14,23 @@ class Admin {
         // Sadece edit ekranlarında yükle
         if (!in_array($hook, ['post.php', 'post-new.php', 'term.php', 'edit-tags.php'], true)) return;
 
+        $css_path = HMPSUI_PATH . 'assets/admin.css';
+        $js_path  = HMPSUI_PATH . 'assets/admin.js';
+        $css_ver  = file_exists($css_path) ? (string) filemtime($css_path) : HMPSUI_VER;
+        $js_ver   = file_exists($js_path) ? (string) filemtime($js_path) : HMPSUI_VER;
+
         wp_enqueue_style(
             'hmpsui-admin',
             HMPSUI_URL . 'assets/admin.css',
             [],
-            HMPSUI_VER
+            $css_ver
         );
 
         wp_enqueue_script(
             'hmpsui-admin',
             HMPSUI_URL . 'assets/admin.js',
             ['jquery'],
-            HMPSUI_VER,
+            $js_ver,
             true
         );
     }
