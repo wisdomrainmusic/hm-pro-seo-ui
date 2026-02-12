@@ -261,6 +261,20 @@
     }
 
     $preview.text(base);
+
+    // SNIPPET URL'yi de güncelle
+    hmpsui_update_snippet_url(base);
+  }
+
+  function hmpsui_update_snippet_url(newUrl){
+    if (!newUrl) return;
+
+    // Snippet içindeki URL satırı
+    var $snippetUrl = $('.hmpsui-snippet-url');
+
+    if ($snippetUrl.length){
+      $snippetUrl.text(newUrl);
+    }
   }
 
   // Slug input açıldığında ve değiştikçe güncelle

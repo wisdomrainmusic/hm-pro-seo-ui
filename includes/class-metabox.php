@@ -81,7 +81,7 @@ class Metabox {
             <div class="hmpsui-snippet">
                 <div class="hmpsui-snippet__label">Google Snippet Önizleme</div>
                 <div class="hmpsui-snippet__title" data-snippet-title></div>
-                <div class="hmpsui-snippet__url" data-snippet-url><?php echo esc_html($permalink); ?></div>
+                <div class="hmpsui-snippet__url hmpsui-snippet-url" data-snippet-url><?php echo esc_html($permalink); ?></div>
                 <div class="hmpsui-snippet__desc" data-snippet-desc></div>
             </div>
 
