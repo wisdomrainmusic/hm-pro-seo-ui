@@ -84,6 +84,19 @@ class Metabox {
                 <div class="hmpsui-snippet__url" data-snippet-url><?php echo esc_html($permalink); ?></div>
                 <div class="hmpsui-snippet__desc" data-snippet-desc></div>
             </div>
+
+            <div class="hmpsui-permalink-row">
+                <label><strong>URL (Slug)</strong></label>
+                <div class="hmpsui-permalink-inline">
+                    <code id="hmpsui-permalink-preview"><?php echo esc_html(get_permalink($post->ID)); ?></code>
+                    <button type="button" class="button button-small" id="hmpsui-edit-slug">
+                        Kalıcı bağlantıyı düzenle
+                    </button>
+                </div>
+                <p class="description">
+                    URL’yi değiştirmek için kalıcı bağlantı (slug) düzenleyicisini açar. Google snippet URL’si buradan gelir.
+                </p>
+            </div>
             <?php endif; ?>
 
             <p>
@@ -114,8 +127,14 @@ class Metabox {
 
             <p>
                 <label><strong>Canonical URL</strong></label>
-                <input type="url" name="hmpsui[canonical]" value="<?php echo esc_attr($seo['canonical']); ?>" class="widefat" />
-                <small>Boş bırak: otomatik canonical.</small>
+                <input
+                    type="url"
+                    name="hmpsui[canonical]"
+                    value="<?php echo esc_attr($seo['canonical']); ?>"
+                    class="widefat"
+                    placeholder="Teknik bilginiz yoksa boş bırakın (önerilir)."
+                />
+                <small>Genelde boş bırakılır. Aynı içerik birden fazla URL’de görünüyorsa, asıl (resmi) URL’yi buraya yazın.</small>
             </p>
             <p>
                 <label><strong>Index Durumu</strong></label>
