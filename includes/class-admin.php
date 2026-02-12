@@ -47,6 +47,21 @@ class Admin {
             remove_meta_box('rank_math_metabox', $screen, 'normal');
             remove_meta_box('rank_math_metabox', $screen, 'side');
             remove_meta_box('rank_math_metabox', $screen, 'advanced');
+
+            /**
+             * Rank Math Content AI / Suggestions kutuları (kuruluma göre id değişebiliyor)
+             * Ama remove_meta_box güvenli: yoksa sorun çıkarmıyor.
+             */
+            remove_meta_box('rank-math-metabox-content-ai', $screen, 'side');
+            remove_meta_box('rank-math-metabox-content-ai', $screen, 'normal');
+            remove_meta_box('rank_math_metabox_content_ai', $screen, 'side');
+            remove_meta_box('rank_math_metabox_content_ai', $screen, 'normal');
+            remove_meta_box('rank_math_content_ai', $screen, 'side');
+            remove_meta_box('rank_math_content_ai', $screen, 'normal');
+
+            // Bazı kurulumlarda link suggestions / internal suggestions
+            remove_meta_box('rank_math_metabox_link_suggestions', $screen, 'side');
+            remove_meta_box('rank_math_metabox_link_suggestions', $screen, 'normal');
         }
     }
 }
