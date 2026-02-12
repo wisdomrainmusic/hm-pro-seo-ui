@@ -20,7 +20,7 @@ class Admin {
 
     public static function remove_rankmath_metabox(): void {
         // Rank Math metabox id: rank_math_metabox
-        // remove_meta_box docs: context = normal/side/advanced :contentReference[oaicite:1]{index=1}
+        // Not (kısa): RM metabox kaldırma -> remove_meta_box('rank_math_metabox', ...).
         $screens = ['product', 'post', 'page'];
         foreach ($screens as $screen) {
             remove_meta_box('rank_math_metabox', $screen, 'normal');
