@@ -200,4 +200,26 @@
   }
 
   $(document).ready(bind);
+
+  // Rank Math sağ panel "SEO: xx/100" kutusunu kesin gizle (CSS kaçarsa bile)
+  $(document).ready(function(){
+    function hideRMScore(){
+      // 1) class üzerinden
+      $('.misc-pub-section.rank-math-seo-score, .rank-math-seo-score').hide();
+
+      // 2) içerik üzerinden (SEO: 59 / 100 gibi)
+      $('#misc-publishing-actions').find('*').each(function(){
+        var t = (this.textContent || '').replace(/\s+/g, ' ').trim();
+        if (t.startsWith('SEO:') && t.indexOf('/ 100') !== -1) {
+          $(this).closest('.misc-pub-section, div, span, p, li').hide();
+        }
+      });
+    }
+
+    hideRMScore();
+    // Rank Math bazen ajax ile yeniden basıyor → birkaç kez daha dene
+    setTimeout(hideRMScore, 500);
+    setTimeout(hideRMScore, 1500);
+    setTimeout(hideRMScore, 3000);
+  });
 })(jQuery);
