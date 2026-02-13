@@ -17,6 +17,35 @@
   display: none !important;
 }
 
+/* Rank Math - taxonomy (kategori) ekranlarında alanları gizle */
+body.term-php [id^="rank_math"],
+body.term-php [id*="rank-math"],
+body.term-php [class*="rank-math"],
+body.term-php [class*="rank_math"],
+body.edit-tags-php [id^="rank_math"],
+body.edit-tags-php [id*="rank-math"],
+body.edit-tags-php [class*="rank-math"],
+body.edit-tags-php [class*="rank_math"] {
+  display: none !important;
+}
+
+/* Rank Math metabox ve üstteki skor pill'lerini gizle */
+body.block-editor-page #rank-math-metabox-wrapper,
+body.block-editor-page .rank-math-sidebar,
+body.block-editor-page .rank-math-toolbar,
+body.block-editor-page .rank-math-score,
+body.block-editor-page .rank-math-icon,
+body.block-editor-page [class*="rank-math"],
+body.block-editor-page [id*="rank-math"],
+body.block-editor-page [class*="rank_math"],
+body.block-editor-page [id^="rank_math"],
+body.post-php #rank_math_metabox,
+body.post-new-php #rank_math_metabox,
+body.term-php #rank_math_metabox,
+body.edit-tags-php #rank_math_metabox {
+  display: none !important;
+}
+
 .hmpsui-snippet {
   border: 1px solid #dcdcde;
   border-radius: 6px;
@@ -81,4 +110,13 @@
 .hmpsui-issues li.ok {
   list-style: none;
   margin-left: -18px;
+}
+
+
+/* Term screens: score block spacing */
+.hmpsui-term-score-row .hmpsui-metabox{
+  margin-top: 8px;
+}
+.hmpsui-term-score-row .hmpsui-issues{
+  margin: 8px 0 0 18px;
 }

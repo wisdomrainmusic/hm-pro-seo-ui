@@ -109,16 +109,14 @@
         longHtml = $('#content').val() || '';
       }
     } catch(e){}
-    if (isProduct){
-      if (!containsH2(longHtml)){
-        issues.push('En az 1 adet H2 başlık yok (öneri).');
-        score -= 3;
-      }
+    if (longHtml && !containsH2(longHtml)){
+      issues.push('En az 1 adet H2 başlık yok (öneri).');
+      score -= 3;
     }
 
     // Keyword occurrences in long description + short description
     if (focus){
-      var occ = countOccurrences((longText + ' ' + shortD), focus);
+      var occ = countOccurrences((longText + ' ' + shortD + ' ' + seoDesc), focus);
       if (occ === 0){
         issues.push('Odak kelime açıklamalar içinde hiç geçmiyor.');
         score -= 10;
@@ -206,23 +204,64 @@
   $(document).on('click', '#hmpsui-edit-slug', function(e){
     e.preventDefault();
 
-    // Başlık alanına scroll (slug edit genelde burada)
-    if ($('#titlewrap').length) {
-      $('html, body').animate({ scrollTop: $('#titlewrap').offset().top - 80 }, 250);
-    }
+    // Classic editor (Ürün / klasik post ekranı): edit-slug-box üzerinden aç
+    var $classicBox = $('#edit-slug-box, #edit-slug-buttons');
+    var $classicBtn = $('#edit-slug-buttons .edit-slug, #edit-slug-box .edit-slug, #edit-slug-buttons button, #edit-slug-box button').first();
 
-    // WP'nin slug düzenle butonu (farklı WP sürümlerinde selector değişebiliyor)
-    var $editBtn =
-      $('#edit-slug-buttons .edit-slug, #edit-slug-box .edit-slug, #edit-slug-buttons button, #edit-slug-box button').first();
-
-    if ($editBtn.length) {
-      $editBtn.trigger('click');
+    if ($classicBox.length && $classicBtn.length) {
+      if ($('#titlewrap').length) {
+        $('html, body').animate({ scrollTop: $('#titlewrap').offset().top - 80 }, 250);
+      }
+      $classicBtn.trigger('click');
       setTimeout(function(){
         if ($('#new-post-slug').length) $('#new-post-slug').focus();
       }, 300);
-    } else {
-      alert('Kalıcı bağlantı düzenleyicisi bu ekranda bulunamadı. Başlık altındaki "Kalıcı bağlantı" alanını kontrol edin.');
+      return;
     }
+
+    // Gutenberg (Sayfa/Yazı): "Kısaltma / URL Slug" paneline götür
+    try {
+      if (window.wp && wp.data && wp.data.dispatch) {
+        // Document sidebar açık olsun
+        try { wp.data.dispatch('core/edit-post').openGeneralSidebar('edit-post/document'); } catch(e){}
+      }
+    } catch(e){}
+
+    var attempts = 0;
+    var maxAttempts = 30; // ~3s
+    var tick = setInterval(function(){
+      attempts++;
+
+      // Panel / buton / input selectorları (WP sürümüne göre değişebilir)
+      var $panel = $('.editor-post-slug__panel, .editor-post-url__panel, .components-panel__body.editor-post-slug__panel');
+      var $btn   = $('.editor-post-slug__button, .editor-post-url__button');
+      var $input = $('input.editor-post-slug__input, input[aria-label="URL Slug"], input[aria-label="URL kısaltması"], input[aria-label="Kısaltma"]');
+
+      // Paneli görünür yap (buton varsa tıkla)
+      if ($btn.length && !$input.length) {
+        $btn.first().trigger('click');
+      }
+
+      // Scroll hedefi
+      var $scrollTarget = $panel.length ? $panel.first() : ($btn.length ? $btn.first() : ($input.length ? $input.first() : null));
+      if ($scrollTarget && $scrollTarget.offset) {
+        try {
+          $('html, body').animate({ scrollTop: $scrollTarget.offset().top - 200 }, 250);
+        } catch(e){}
+      }
+
+      // Input çıktıysa focus
+      if ($input.length) {
+        $input.first().focus();
+        clearInterval(tick);
+        return;
+      }
+
+      if (attempts >= maxAttempts) {
+        clearInterval(tick);
+        alert('Kalıcı bağlantı düzenleyicisi bu ekranda bulunamadı. Sağ panelde "Kısaltma" alanını kontrol edin.');
+      }
+    }, 100);
   });
 
   // HM Pro: Slug değişince URL preview'yi canlı güncelle
@@ -234,36 +273,38 @@
     var slugVal = ($slug.val() || '').trim();
     if (!slugVal) return;
 
-    // WP edit ekranındaki permalink yapısını al: #sample-permalink a ya da #sample-permalink
+    // En stabil kaynak: PHP tarafından basılan permalink_base
+    var $wrap = $('.hmpsui-wrap');
+    var permalinkBase = $wrap.length ? ($wrap.data('permalinkBase') || $wrap.attr('data-permalink-base')) : '';
+
+    // sample-permalink'i sadece fallback olarak kullan (bazı durumlarda ajax ile üst üste eklemeler olabiliyor)
     var $sampleLink = $('#sample-permalink a');
     var sampleHref = $sampleLink.length ? $sampleLink.attr('href') : '';
 
-    // sample-permalink yoksa, mevcut preview URL üzerinden base çıkarıp slug'ı değiştir
-    var current = $preview.text().trim();
-
-    // Base URL hesapla (en güvenlisi sample permalink)
-    var base;
-    if (sampleHref) {
-      // sampleHref genelde doğru canonical/permalink yapısını verir
+    var newUrl = '';
+    if (permalinkBase) {
+      // permalinkBase daima '/' ile biter
+      newUrl = String(permalinkBase).replace(/\s+/g,'').replace(/\/+$/, '/') + slugVal.replace(/^\/+|\/+$/g,'') + '/';
+    } else if (sampleHref) {
       try {
         var u = new URL(sampleHref, window.location.origin);
-        // path'in son segmentini slug yapalım
         var parts = u.pathname.replace(/\/+$/, '').split('/');
         parts[parts.length - 1] = slugVal;
         u.pathname = parts.join('/') + '/';
-        base = u.toString();
+        newUrl = u.toString();
       } catch(e) {
-        base = sampleHref;
+        newUrl = sampleHref;
       }
     } else {
       // fallback: mevcut URL'nin son slugını değiştir
-      base = current.replace(/\/[^\/]*\/?$/, '/' + slugVal + '/');
+      var current = $preview.text().trim();
+      newUrl = current.replace(/\/[^\/]*\/?$/, '/' + slugVal + '/');
     }
 
-    $preview.text(base);
+    $preview.text(newUrl);
 
     // SNIPPET URL'yi de güncelle
-    hmpsui_update_snippet_url(base);
+    hmpsui_update_snippet_url(newUrl);
   }
 
   function hmpsui_update_snippet_url(newUrl){
@@ -287,6 +328,138 @@
     setTimeout(function(){
       hmpsui_update_permalink_preview_from_slug();
     }, 300);
+  });
+
+  // --- Term (Kategori/Etiket) ekranları: canlı snippet önizleme ---
+  function hmpsui_update_term_snippet(){
+    var $wrap = $('.hmpsui-term-snippet');
+    if (!$wrap.length) return;
+
+    var base = ($wrap.data('permalinkBase') || '').toString();
+    if (!base) return;
+
+    var slug = ($('#slug').val() || '').toString().trim();
+    if (!slug) return;
+
+    // URL
+    var newUrl = base.replace(/\/+$/, '/') + slug.replace(/^\/+/, '') + '/';
+    $('.hmpsui-term-url-preview').text(newUrl);
+    $('.hmpsui-term-snippet-url').text(newUrl);
+
+    // Title
+    var title = ($('#hmpsui_term_seo_title').val() || '').toString().trim();
+    if (!title) {
+      title = ($('#name').val() || '').toString().trim();
+    }
+    if (title) {
+      $('.hmpsui-term-snippet-title').text(title);
+    }
+
+    // Description
+    var desc = ($('#hmpsui_term_seo_description').val() || '').toString().trim();
+    if (!desc) {
+      desc = ($('#description').val() || '').toString().trim();
+    }
+    if (desc) {
+      $('.hmpsui-term-snippet-desc').text(desc);
+    }
+  
+  function hmpsui_update_term_score(){
+    var $scope = $('.hmpsui-term-score');
+    if (!$scope.length) return;
+
+    var seoTitle = norm($('#hmpsui_term_seo_title').val());
+    var seoDesc  = norm($('#hmpsui_term_seo_description').val());
+    var focus    = norm($('#hmpsui_term_focus').val());
+
+    var h1 = norm($('#name').val());
+    var longHtml = ($('#description').val() || '').toString();
+
+    var issues = [];
+    var score = 100;
+
+    var titleLen = strLen(seoTitle);
+    var descLen  = strLen(seoDesc);
+
+    if (!seoTitle){ issues.push('SEO Başlık boş.'); score -= 25; }
+    if (!seoDesc){ issues.push('SEO Açıklama boş.'); score -= 25; }
+
+    if (seoTitle && (titleLen < 30 || titleLen > 65)){ issues.push('SEO Başlık uzunluğu önerilen aralıkta değil (30–65).'); score -= 10; }
+    if (seoDesc && (descLen < 90 || descLen > 170)){ issues.push('SEO Açıklama uzunluğu önerilen aralıkta değil (90–170).'); score -= 10; }
+
+    if (!focus){ issues.push('Odak anahtar kelime boş.'); score -= 10; }
+
+    if (focus && h1 && h1.toLowerCase().indexOf(focus.toLowerCase()) === -1){
+      issues.push('Odak kelime kategori adı içinde geçmiyor (öneri).');
+      score -= 5;
+    }
+
+    if (focus && seoDesc && seoDesc.toLowerCase().indexOf(focus.toLowerCase()) === -1){
+      issues.push('Odak kelime SEO Açıklama içinde geçmiyor (öneri).');
+      score -= 5;
+    }
+
+    // H2 check (term description HTML)
+    if (!containsH2(longHtml)){
+      issues.push('En az 1 adet H2 başlık yok (öneri).');
+      score -= 3;
+    }
+
+    if (score < 0) score = 0;
+
+    $scope.find('[data-hmpsui-score]').text(score);
+    var $ul = $scope.find('[data-hmpsui-issues]');
+    if ($ul.length){
+      $ul.empty();
+      if (issues.length){
+        issues.forEach(function(msg){
+          $ul.append('<li>' + msg + '</li>');
+        });
+      } else {
+        $ul.append('<li>Harika! Önemli bir eksik görünmüyor.</li>');
+      }
+    }
+  }
+
+}
+
+  // Term alanları değişince güncelle
+  $(document).on('input keyup change', '#slug, #name, #description, #hmpsui_term_seo_title, #hmpsui_term_seo_description, #hmpsui_term_focus', hmpsui_update_term_snippet);
+  $(document).on('input keyup change', '#slug, #name, #description, #hmpsui_term_seo_title, #hmpsui_term_seo_description, #hmpsui_term_focus', hmpsui_update_term_score);
+  $(document).on('click', '.hmpsui-term-edit-slug', function(e){
+    e.preventDefault();
+    $('#slug').trigger('focus');
+  });
+  $(document).ready(function(){
+    setTimeout(function(){ hmpsui_update_term_snippet(); hmpsui_update_term_score(); }, 250);
+  });
+
+
+  // --- Rank Math UI: Gutenberg sağ üst ikonlar / sidebar bileşenleri ---
+  $(document).ready(function(){
+    function hideRankMathUI(){
+      // Gutenberg toolbar / sidebar / score pill
+      $('[class*="rank-math"], [id*="rank-math"], [id^="rank_math"], [class*="rank_math"]').each(function(){
+        // Güvenli: HM paneli hmpsui- prefiksi kullanır, burada yakalanmaz.
+        var $el = $(this);
+        // Bazı elemanlar editor layout'u bozmasın diye sadece hide
+        $el.hide();
+      });
+
+      // Rank Math butonları (aria-label üzerinden) – farklı sürümlerde daha stabil
+      $('[aria-label*="Rank Math"], [title*="Rank Math"]').each(function(){
+        $(this).hide();
+      });
+    }
+
+    hideRankMathUI();
+    // Rank Math editor içinde yeniden render olabiliyor → kısa süreli polling
+    var tries = 0;
+    var t = setInterval(function(){
+      hideRankMathUI();
+      tries++;
+      if (tries >= 10) clearInterval(t);
+    }, 700);
   });
 
 

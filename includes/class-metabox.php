@@ -39,6 +39,16 @@ class Metabox {
         $is_product = ($post->post_type === 'product');
         $short_desc = $is_product ? (string) get_post_field('post_excerpt', $post->ID) : '';
         $permalink  = get_permalink($post);
+        $slug       = (string) $post->post_name;
+        // Stable base URL used by JS when previewing slug changes (prevents accidental repeated concatenation).
+        $permalink_base = $permalink;
+        if ($slug !== '') {
+            $pattern = '#/' . preg_quote($slug, '#') . '/?$#';
+            if (preg_match($pattern, $permalink)) {
+                $permalink_base = preg_replace($pattern, '/', $permalink);
+            }
+        }
+        $permalink_base = trailingslashit($permalink_base);
         $site_name  = get_bloginfo('name');
         $h1_title   = (string) get_the_title($post);
         $long_html  = (string) get_post_field('post_content', $post->ID);
@@ -68,6 +78,8 @@ class Metabox {
         <div class="hmpsui-wrap"
              data-hmpsui="1"
              data-permalink="<?php echo esc_attr($permalink); ?>"
+             data-permalink-base="<?php echo esc_attr($permalink_base); ?>"
+             data-post-slug="<?php echo esc_attr($slug); ?>"
              data-site-name="<?php echo esc_attr($site_name); ?>"
              data-h1="<?php echo esc_attr($h1_title); ?>"
              data-long-html="<?php echo esc_attr(wp_strip_all_tags($long_html)); ?>"
@@ -77,7 +89,6 @@ class Metabox {
              data-price="<?php echo esc_attr($price); ?>"
              data-stock="<?php echo esc_attr($stock); ?>"
         >
-            <?php if ($is_product): ?>
             <div class="hmpsui-snippet">
                 <div class="hmpsui-snippet__label">Google Snippet Önizleme</div>
                 <div class="hmpsui-snippet__title" data-snippet-title></div>
@@ -97,7 +108,6 @@ class Metabox {
                     URL’yi değiştirmek için kalıcı bağlantı (slug) düzenleyicisini açar. Google snippet URL’si buradan gelir.
                 </p>
             </div>
-            <?php endif; ?>
 
             <p>
                 <label><strong>SEO Başlık</strong></label>
